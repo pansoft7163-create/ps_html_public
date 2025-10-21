@@ -24,6 +24,11 @@
           "name": "MDN Web Docs",
           "url": "https://developer.mozilla.org",
           "description": "Web开发文档"
+        },
+        {
+          "name": "Docker 容器分析器",
+          "url": "./docker-analyzer.html",
+          "description": "分析和管理 Docker 容器的可视化工具"
         }
       ]
     },
