@@ -1,0 +1,59 @@
+name: 清理已合并的分支
+
+# 每周日自动运行，或手动触发
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日午夜运行
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史
+
+      - name: 清理已合并的远程分支
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🧹 开始清理已合并的远程分支..."
+
+          # 获取所有远程分支
+          git fetch --all
+
+          # 获取默认分支
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+          echo "默认分支: $DEFAULT_BRANCH"
+
+          # 查找已合并到默认分支的远程分支
+          MERGED_BRANCHES=$(git branch -r --merged origin/$DEFAULT_BRANCH | \
+            grep -v "$DEFAULT_BRANCH" | \
+            grep -v "HEAD" | \
+            sed 's/origin\///' | \
+            xargs)
+
+          if [ -z "$MERGED_BRANCHES" ]; then
+            echo "✅ 没有需要清理的分支"
+            exit 0
+          fi
+
+          echo "发现以下已合并的分支:"
+          echo "$MERGED_BRANCHES"
+
+          # 删除已合并的远程分支
+          for branch in $MERGED_BRANCHES; do
+            # 跳过受保护的分支模式
+            if [[ "$branch" == "main" ]] || [[ "$branch" == "master" ]] || [[ "$branch" == "develop" ]]; then
+              echo "⏭️  跳过受保护分支: $branch"
+              continue
+            fi
+
+            echo "🗑️  删除分支: $branch"
+            git push origin --delete "$branch" || echo "⚠️  无法删除分支: $branch"
+          done
+
+          echo "✅ 清理完成！"
